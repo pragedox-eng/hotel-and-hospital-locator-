@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Smart Hospital & Hotel Locator</title>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+
+<style>
+*{
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', sans-serif;
+}
+
+/* Animated Background */
+body{
+    background: linear-gradient(
+        -45deg,
+        #001f54,
+        #034078,
+        #1282a2,
+        #00a6fb
+    );
+    background-size: 400% 400%;
+    animation: bgAnimation 15s ease infinite;
+    min-height: 100vh;
+    overflow-x: hidden;
+}
+
+@keyframes bgAnimation{
+    0%{ background-position: 0% 50%; }
+    50%{ background-position: 100% 50%; }
+    100%{ background-position: 0% 50%; }
+}
+
+/* Loader */
+#loader{
+    position: fixed;
+    width: 100%;
+    height: 100%;
+    background: #001f54;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: white;
+    font-size: 30px;
+    z-index: 9999;
+    transition: opacity 0.5s ease;
+}
+
+/* Header */
+header{
+    background: rgba(255,255,255,0.15);
+    backdrop-filter: blur(15px);
+    text-align: center;
+    padding: 25px;
+    color: white;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+}
+
+header h1{ font-size: 38px; }
+header p{ margin-top: 10px; }
+
+/* Hero Section */
+.hero{
+    width: 90%;
+    margin: 30px auto;
+    background: rgba(255,255,255,0.15);
+    backdrop-filter: blur(15px);
+    border-radius: 20px;
+    padding: 30px;
+    color: white;
+    text-align: center;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+}
+
+.hero h2{ margin-bottom: 15px; }
+.hero p{ line-height: 1.8; }
+
+/* Buttons */
+.controls{
+    text-align: center;
+    margin: 20px;
+}
+
+button{
+    background: linear-gradient(45deg, #00c6ff, #0072ff);
+    border: none;
+    color: white;
+    padding: 15px 25px;
+    margin: 10px;
+    border-radius: 50px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: 0.3s;
+}
+
+button:hover{
+    transform: scale(1.08);
+    box-shadow: 0 0 20px #00c6ff;
+}
+
+/* Map */
+#map{
+    width: 95%;
+    height: 550px;
+    margin: auto;
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    z-index: 1; /* Keep map controls working */
+}
+
+/* Info Cards */
+.info-container{
+    width: 95%;
+    margin: 30px auto;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.card{
+    background: rgba(255,255,255,0.15);
+    backdrop-filter: blur(15px);
+    padding: 20px;
+    border-radius: 20px;
+    color: white;
+}
+
+.card h3{ margin-bottom: 15px; }
+li{
+    padding: 8px;
+    list-style: none;
+    border-bottom: 1px solid rgba(255,255,255,0.2);
+}
+
+/* Statistics */
+.stats{
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin: 30px;
+}
+
+.stat{
+    width: 220px;
+    background: rgba(255,255,255,0.15);
+    backdrop-filter: blur(15px);
+    color: white;
+    text-align: center;
+    padding: 20px;
+    border-radius: 20px;
+}
+
+.stat h2{ font-size: 40px; }
+footer{ text-align: center; color: white; padding: 20px; margin-top: 30px; }
+
+/* Custom Cursor Fixed */
+.cursor{
+    width: 20px;
+    height: 20px;
+    border: 2px solid cyan;
+    border-radius: 50%;
+    position: fixed;
+    pointer-events: none; /* CRITICAL: Prevents blocking clicks on map/buttons */
+    z-index: 99999;
+    transform: translate(-50%,-50%);
+    box-shadow: 0 0 10px cyan, 0 0 20px cyan;
+    left: -50px; /* Hide initially off-screen */
+    top: -50px;
+}
+
+@media(max-width:768px){
+    .info-container{ grid-template-columns: 1fr; }
+    header h1{ font-size: 28px; }
+}
+</style>
+</head>
+
+<body>
+
+<div id="loader">Loading Smart Locator...</div>
+<div class="cursor"></div>
+
+<header>
+    <h1>🏥 Smart Hospital & Hotel Locator</h1>
+    <p>Emergency & Travel Assistance System</p>
+</header>
+
+<section class="hero">
+    <h2>Project Purpose</h2>
+    <p>The Smart Hospital and Hotel Locator is a GPS-based web application designed to help users identify nearby hospitals and hotels in real time. This platform is useful during emergency situations, medical assistance requirements, travel planning, accommodation booking, and location-based service discovery. Using interactive maps and GPS tracking, users can instantly locate nearby facilities, view their distance from the current location, and navigate easily using map services.</p>
+</section>
+
+<div class="controls">
+    <button onclick="findNearbyPlaces()">📍 Find Nearby Hospitals & Hotels</button>
+    <button onclick="callEmergency()">🚑 Emergency SOS</button>
+</div>
+
+<div id="map"></div>
+
+<section class="stats">
+    <div class="stat"><h2>24/7</h2><p>Emergency Support</p></div>
+    <div class="stat"><h2>GPS</h2><p>Live Tracking</p></div>
+    <div class="stat"><h2>5 KM</h2><p>Search Radius</p></div>
+</section>
+
+<div class="info-container">
+    <div class="card">
+        <h3>🏥 Nearby Hospitals</h3>
+        <ul id="hospitalList"></ul>
+    </div>
+    <div class="card">
+        <h3>🏨 Nearby Hotels</h3>
+        <ul id="hotelList"></ul>
+    </div>
+</div>
+
+<footer>© 2026 Smart Hospital & Hotel Locator</footer>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+/* Loader */
+window.addEventListener("load",()=>{
+    setTimeout(()=>{
+        document.getElementById("loader").style.opacity="0";
+        setTimeout(() => {
+            document.getElementById("loader").style.display="none";
+        }, 500);
+    },1500);
+});
+
+/* Custom Cursor */
+const cursor=document.querySelector(".cursor");
+document.addEventListener("mousemove",(e)=>{
+    cursor.style.left=e.clientX+"px";
+    cursor.style.top=e.clientY+"px";
+});
+
+/* Emergency */
+function callEmergency(){
+    alert("Emergency Number: 112\nAmbulance: 108");
+}
+
+/* Map initialization wrapper */
+let map;
+function initializeMap(lat,lon){
+    map = L.map("map").setView([lat,lon],14);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution:'© OpenStreetMap'
+    }).addTo(map);
+
+    L.marker([lat,lon])
+        .addTo(map)
+        .bindPopup("You are here")
+        .openPopup();
+}
+
+/* Haversine Distance Formula */
+function getDistance(lat1,lon1,lat2,lon2){
+    const R = 6371;
+    const dLat = (lat2-lat1)*Math.PI/180;
+    const dLon = (lon2-lon1)*Math.PI/180;
+    const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLon/2)**2;
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return (R*c).toFixed(2);
+}
+
+/* Find Places Logic */
+async function findNearbyPlaces(){
+    if(!navigator.geolocation){
+        alert("Geolocation not supported.");
+        return;
+    }
+
+    navigator.geolocation.getCurrentPosition(async(position)=>{
+        const lat = position.coords.latitude;
+        const lon = position.coords.longitude;
+
+        if(!map){
+            initializeMap(lat,lon);
+        } else {
+            map.setView([lat,lon],14);
+        }
+
+        document.getElementById("hospitalList").innerHTML = "<li>Loading hospitals...</li>";
+        document.getElementById("hotelList").innerHTML = "<li>Loading hotels...</li>";
+
+        // FIXED OVERPASS QUERY: Added 'way' and 'relation' features alongside node
+        const query = `
+        [out:json];
+        (
+          node["amenity"="hospital"](around:5000,${lat},${lon});
+          way["amenity"="hospital"](around:5000,${lat},${lon});
+          relation["amenity"="hospital"](around:5000,${lat},${lon});
+          node["tourism"="hotel"](around:5000,${lat},${lon});
+          way["tourism"="hotel"](around:5000,${lat},${lon});
+          relation["tourism"="hotel"](around:5000,${lat},${lon});
+        );
+        out center;
+        `;
+
+        const url = "https://overpass-api.de/api/interpreter?data=" + encodeURIComponent(query);
+        
+        try {
+            const response = await fetch(url);
+            const data = await response.json();
+            
+            document.getElementById("hospitalList").innerHTML = "";
+            document.getElementById("hotelList").innerHTML = "";
+
+            if (!data.elements || data.elements.length === 0) {
+                document.getElementById("hospitalList").innerHTML = "<li>No hospitals found within 5km.</li>";
+                document.getElementById("hotelList").innerHTML = "<li>No hotels found within 5km.</li>";
+                return;
+            }
+
+            data.elements.forEach(place => {
+                const name = place.tags.name || "Unnamed Place";
+                
+                // Normalizing coordinates for Map features (Ways/Relations center vs Node lat/lon)
+                const pLat = place.lat || (place.center ? place.center.lat : null);
+                const pLon = place.lon || (place.center ? place.center.lon : null);
+
+                if(!pLat || !pLon) return;
+
+                const distance = getDistance(lat, lon, pLat, pLon);
+                
+                // FIXED GOOGLE MAPS NAVIGATION LINK
+                const directions = `https://www.google.com/maps/dir/?api=1&destination=${pLat},${pLon}`;
+
+                if(place.tags.amenity === "hospital"){
+                    document.getElementById("hospitalList").innerHTML += `
+                        <li>
+                            <b>${name}</b><br>
+                            Distance: ${distance} km<br>
+                            <a href="${directions}" target="_blank" style="color:#00c6ff;">Navigate</a>
+                        </li>`;
+
+                    L.circleMarker([pLat, pLon], { radius: 8, color: "red", fillColor: "#f03", fillOpacity: 0.5 })
+                        .addTo(map)
+                        .bindPopup(`<b>${name}</b><br>Distance: ${distance} km<br><a href="${directions}" target="_blank">Navigate</a>`);
+                }
+
+                if(place.tags.tourism === "hotel"){
+                    document.getElementById("hotelList").innerHTML += `
+                        <li>
+                            <b>${name}</b><br>
+                            Distance: ${distance} km<br>
+                            <a href="${directions}" target="_blank" style="color:#00ff88;">Navigate</a>
+                        </li>`;
+
+                    L.circleMarker([pLat, pLon], { radius: 8, color: "green", fillColor: "#0f3", fillOpacity: 0.5 })
+                        .addTo(map)
+                        .bindPopup(`<b>${name}</b><br>Distance: ${distance} km<br><a href="${directions}" target="_blank">Navigate</a>`);
+                }
+            });
+        } catch (error) {
+            console.error("Error fetching data from Overpass API:", error);
+            alert("Failed to retrieve local data. Please try again.");
+        }
+    },
+    (error)=>{
+        alert("Location permission denied or unavailable.");
+    });
+}
+</script>
+
+</body>
+</html>
